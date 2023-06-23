@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <time.h>
@@ -140,12 +141,32 @@ void opcode_DXYN(uint8_t x, uint8_t y, uint8_t n) {
 };
 
 // Function to initialize the CHIP-8
-void initialize(char* filename) {
+int initialize(char* filename) {
   // Load the font into memory
   load_font();
   // Initialize the registers to be zeroed out
   init_registers();
   // TODO: Read in the ROM file in bytes
+  FILE* file = fopen(filename, "rb");
+  if(file == NULL) {
+    printf("File not found!");
+    return -1;
+  }
+  fseek(file, 0, SEEK_END);
+  long filelen = ftell(file);
+  printf("%li", filelen);
+  rewind(file);
+  char *file_buffer = (char*)malloc(filelen * sizeof(char));
+  fread(file_buffer, filelen, 1, file);
+  uint16_t start_address = 0x200;
+  for(int i = start_address; i < filelen; i++)
+  {
+    memory[i] = file_buffer[i];
+  }
+  fclose(file);
+  free(file_buffer);
+  printf("Successfully initialized!");
+  return 0;
 }
 
 void emulate_cycle() {
@@ -184,5 +205,6 @@ void emulate_cycle() {
 
 int main(void) 
 {
+  initialize("IBM_Logo.ch8");
   return 0;
 }
