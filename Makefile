@@ -16,7 +16,7 @@ SRCS := chip-8.c
 OBJS := $(SRCS:.c=.o)
 
 # name of executable
-EXEC := game
+EXEC := chip8
 
 # default recipe
 all: $(EXEC)

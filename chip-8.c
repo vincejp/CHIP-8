@@ -2,7 +2,9 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <string.h>
 #include <time.h>
+#include <SDL.h>
 #define FONT_ARRAY_SIZE 80 
 #define SCREEN_WIDTH 64
 #define SCREEN_HEIGHT 32
@@ -11,7 +13,7 @@
 
 uint8_t memory[4096];
 // The display
-uint8_t display[SCREEN_WIDTH * SCREEN_HEIGHT];
+uint32_t display[SCREEN_WIDTH * SCREEN_HEIGHT];
 // Program counter, to store the current executing instruction
 uint16_t pc; 
 // Stack, to store the order of execution
@@ -31,7 +33,6 @@ uint16_t keypad[16];
 // Index register
 uint16_t index_register = 0;
 bool drawFlag = false;
-
 // Addresses where the font starts and ends in our emulated memory
 const uint8_t FONT_START_ADDRESS = 0x50;
 const uint8_t FONT_END_ADDRESS = 0x9F;
@@ -82,7 +83,6 @@ void opcode_00E0() {
     display[i] = display[i] & 0x00;
   }
   drawFlag = true;
-  pc += 2;
 };
 
 // Jump instruction - DONE, not tested
@@ -113,7 +113,6 @@ void opcode_7XNN() {
 // Set index register I - DONE, not tested;
 void opcode_ANNN() {
   index_register = opcode & 0x0FFF;
-  pc += 2;
 };
 
 // Display/draw 
@@ -122,23 +121,27 @@ void opcode_DXYN(uint8_t x, uint8_t y, uint8_t n) {
   // GOAL: Draw a n N pixels tall sprite at the memory location index_register holds given, 
   // Get what is in register VX
   registers[0xF] = 0;
-
-  for(int yline = 0; yline < n; yline++) {
+  uint8_t xPos = registers[x] % SCREEN_WIDTH;
+  uint8_t yPos = registers[y] % SCREEN_HEIGHT;
+  for(int row = 0; row < n; row++) {
     // Get the pixel at memory location Index register + y
-    uint8_t current_byte = memory[index_register + y];
+    uint8_t current_byte = memory[index_register + row];
 
-    for(int xline = 0; xline < 8; xline++) {
-      if((current_byte & (0x80 >> x)) != 0)
+    for(int column = 0; column < 8; column++) {
+      uint8_t current_pixel = current_byte & (0x80u >> column);
+      uint32_t* screenPixel = &display[(yPos + row) * SCREEN_WIDTH + (xPos + column)];
+      if(current_pixel)
       {
-        if(display[(x + xline + ((y + yline) * 64))] == 1)
+        if(*screenPixel == 0xFF) {
           registers[0xF] = 1;
-        display[x + xline + ((y + yline) * 64)] ^= 1;
+        }
+        *screenPixel ^= 0xFF;
       }
     }
   }
   drawFlag = true;
-  pc += 2;
 };
+
 
 // Function to initialize the CHIP-8
 int initialize(char* filename) {
@@ -146,6 +149,7 @@ int initialize(char* filename) {
   load_font();
   // Initialize the registers to be zeroed out
   init_registers();
+  init_memory();
   // TODO: Read in the ROM file in bytes
   FILE* file = fopen(filename, "rb");
   if(file == NULL) {
@@ -155,22 +159,19 @@ int initialize(char* filename) {
   fseek(file, 0, SEEK_END);
   long filelen = ftell(file);
   printf("%li", filelen);
-  rewind(file);
-  char *file_buffer = (char*)malloc(filelen * sizeof(char));
-  fread(file_buffer, filelen, 1, file);
+  fseek(file, 0, SEEK_SET);
   uint16_t start_address = 0x200;
-  for(int i = start_address; i < filelen; i++)
-  {
-    memory[i] = file_buffer[i];
-  }
+  fread(memory + start_address, sizeof(uint16_t), filelen, file);
   fclose(file);
-  free(file_buffer);
   printf("Successfully initialized!");
   return 0;
 }
 
 void emulate_cycle() {
-  opcode = memory[pc] << 8 | memory[pc + 1];
+  opcode = memory[pc + 0];
+  opcode <<= 8;
+  opcode |= memory[pc + 1];
+  pc += 2;
   uint8_t n;
   uint8_t x;
   uint8_t y;
@@ -192,9 +193,9 @@ void emulate_cycle() {
       opcode_7XNN();
       break;
     case 0xD000:
-      n = 0xD000 & 0x000F;
-      x = (0xD000 & 0x0F00) >> 8;
-      y = (0xD000 & 0x00F0) >> 4;
+      n = opcode & 0x000F;
+      x = (opcode & 0x0F00) >> 8;
+      y = (opcode & 0x00F0) >> 4;
       opcode_DXYN(x, y, n);
       break;
     case 0x00E0:
@@ -203,8 +204,41 @@ void emulate_cycle() {
   }
 }
 
-int main(void) 
+int main(void)
 {
-  initialize("IBM_Logo.ch8");
+  bool quit = false;
+  SDL_Init(SDL_INIT_VIDEO);
+  if(initialize("ibm.ch8") == -1)
+  {
+    printf("Error initializing ROM");
+    return -1;
+  };
+  SDL_Window * window = SDL_CreateWindow("CHIP-8",
+      SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 64 * 10, 32 * 10, 0);
+  SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, 0);
+  SDL_Texture *texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STATIC, 64, 32);
+  memset(display, 0, 64 * 32 * sizeof(uint32_t));
+  SDL_Event event;
+
+  while (!quit)
+  {
+      while(SDL_PollEvent(&event))
+      {
+        if(event.type == SDL_QUIT)
+        {
+          quit = true;
+        }
+      }
+      emulate_cycle();
+      SDL_UpdateTexture(texture, NULL, display, 64 * sizeof(uint32_t));    
+      SDL_RenderClear(renderer);
+      SDL_RenderCopy(renderer, texture, NULL, NULL);
+      SDL_RenderPresent(renderer);
+  }
+
+  SDL_DestroyWindow(window);
+  SDL_DestroyTexture(texture);
+  SDL_DestroyRenderer(renderer);
+  SDL_Quit();
   return 0;
 }
