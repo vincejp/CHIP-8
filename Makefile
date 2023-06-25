@@ -7,10 +7,10 @@ CC := clang
 CFLAGS := `sdl2-config --libs --cflags` -ggdb3 -O0 --std=c99 -Wall -lSDL2_image -lm
 
 # add header files here
-HDRS :=
+HDRS := chip-8.h
 
 # add source files here
-SRCS := chip-8.c
+SRCS := main.c chip-8.c
 
 # generate names of object files
 OBJS := $(SRCS:.c=.o)
