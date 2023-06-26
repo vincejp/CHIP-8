@@ -87,6 +87,8 @@ void opcode_ANNN(CHIP_8 *chip8) {
   chip8->index_register = chip8->opcode & 0x0FFF;
 };
 
+
+
 // Display/draw 
 // THIS IS NOT MY OWN CODE
 void opcode_DXYN(CHIP_8 *chip8, uint8_t x, uint8_t y, uint8_t n) {
@@ -113,6 +115,219 @@ void opcode_DXYN(CHIP_8 *chip8, uint8_t x, uint8_t y, uint8_t n) {
   }
   chip8->drawFlag = true;
 };
+
+void opcode_2NNN(CHIP_8 * chip8, uint16_t nnn) {
+  // CALL the subroutine at memory location NNN
+  // increment the stack pointer
+  chip8->stack_ptr += 1;
+  // Then put the current program counter at the top of the stack 
+  chip8->stack[chip8->stack_ptr] = chip8->pc;
+  // Then PC is set to nnn 
+  chip8->pc = nnn; 
+}
+
+void opcode_00EE(CHIP_8 * chip8) {
+  // Return from the subroutine 
+  // Remove the last address from the stack
+  
+  // Get the address of the last element in the stack
+  uint16_t last_address = chip8->stack[chip8->stack_ptr];
+  // Eliminate the value 
+  chip8->stack[chip8->stack_ptr] = 0;
+  // Decrement the stack pointer 
+  chip8->stack_ptr -= 1;
+}
+// Conditional branch instructions 
+// TODO: Edit function headers
+void opcode_3XKK(CHIP_8 * chip8, uint8_t x, uint8_t nn) {
+  // If the value in v[x] is equal to nn, skip one instruction
+  if(chip8->registers[x] == nn) 
+    chip8->pc += 2;
+}
+void opcode_4XKK(CHIP_8 * chip8, uint8_t x, uint8_t nn) {
+  // If the value in v[x] is not equal to nn, skip one instruction
+  if(chip8->registers[x] != nn) 
+    chip8->pc += 2;
+}
+
+void opcode_5XY0(CHIP_8 *chip8, uint8_t x, uint8_t y) {
+  // Skip an instruction if v[x] == v[y]
+  if(chip8->registers[x] == chip8->registers[y]) {
+    chip8->pc += 2;
+  }
+}
+
+void opcode_9XY0(CHIP_8 *chip8, uint8_t x, uint8_t y) {
+  // Skip an instruction if v[x] != v[y]
+  if(chip8->registers[x] != chip8->registers[y]) {
+    chip8->pc += 2;
+  }
+}
+
+/* Logical and arithemtic instructions */
+
+// Set VX's value to be that of VY */
+void opcode_8XY0(CHIP_8 *chip8, uint8_t x, uint8_t y) {
+  chip8->registers[y] = chip8->registers[x];
+}
+
+// Set VX to the logical OR of VX and VY */
+void opcode_8XY1(CHIP_8 *chip8, uint8_t x, uint8_t y) {
+  chip8->registers[x] = x | y;
+}
+
+void opcode_8XY2(CHIP_8 *chip8, uint8_t x, uint8_t y) {
+  chip8->registers[x] = x & y;
+}
+
+void opcode_8XY3(CHIP_8 *chip8, uint8_t x, uint8_t y) {
+  chip8->registers[x] = x ^ y;
+}
+
+void opcode_8XY4(CHIP_8 *chip8, uint8_t x, uint8_t y) {
+  // Set VX to be the value of VX plus VY
+  // Set the carry flag if the result is larger than 255
+  uint16_t result = chip8->registers[x] + chip8->registers[y];
+  if(result > 255)
+    chip8->registers[0xF] = 1;
+  chip8->registers[x] = chip8->registers[x] + chip8->registers[y];
+}
+
+void opcode_8XY5(CHIP_8 *chip8, uint8_t x, uint8_t y) {
+  if(chip8->registers[x] > chip8->registers[y])
+    chip8->registers[0xF] = 1;
+  else  
+    chip8->registers[0xF] = 0; 
+  chip8->registers[x] = chip8->registers[x] - chip8->registers[y];
+}
+
+void opcode_8XY6(CHIP_8 *chip8, uint8_t x, uint8_t y) {
+  // Get the least significant bit of v[x]
+  uint8_t lsb = chip8->registers[x] & 0x01;
+  // Set the flag register
+  if(lsb == 1)
+    chip8->registers[0xF] = 1; 
+  else
+    chip8->registers[0xF] = 0;
+  // Then divide by two 
+  chip8->registers[x] = chip8->registers[x] >> 1;
+}
+
+void opcode_8XY7(CHIP_8 *chip8, uint8_t x, uint8_t y) {
+  if(chip8->registers[y] > chip8->registers[x])
+    chip8->registers[0xF] = 1;
+  else
+    chip8->registers[0xF] = 0; 
+  chip8->registers[x] = chip8->registers[y] - chip8->registers[x];
+}
+
+void opcode_8XYE(CHIP_8 *chip8, uint8_t x, uint8_t y) {
+  // Get the bit that will be shifted out 
+  uint8_t lsb = chip8->registers[x] & 0x01;
+  // Set the flag register
+  if(lsb == 1)
+    chip8->registers[0xF] = 1; 
+  else
+    chip8->registers[0xF] = 0;
+  // Then shift(multiply by two)
+  chip8->registers[x] = chip8->registers[x] << 1;
+}
+
+void opcode_BNNN(CHIP_8 *chip8, uint16_t nnn) {
+  // Jump to address nnn + v[0]
+  chip8->pc = nnn + chip8->registers[0];
+}
+
+void opcode_CXKK(CHIP_8 *chip8, uint8_t x, uint8_t nn) {
+  srand(time(NULL));
+  // Generate random number between 0 and 255 
+  uint8_t num = (rand() % (255 - 0 + 1)) + 0;
+  // Binary AND the number with nn 
+  num = num & nn;
+  // Put the result in v[x]
+  chip8->registers[x] = num;
+}
+
+void opcode_EX9E(CHIP_8 *chip8, uint8_t x) {
+  // If keypad[x] is currently down, skip the next instruction 
+  if(chip8->keypad[x] == 1) {
+    chip8->pc += 2;
+  }
+}
+
+void opcode_EXA1(CHIP_8 *chip8, uint8_t x) {
+  // If keypad[x] is currently up, skip the next instruction 
+  if(chip8->keypad[x] == 0) {
+    chip8->pc += 2;
+  }
+}
+
+void opcode_FX07(CHIP_8 *chip8, uint8_t x) {
+  chip8->registers[x] = chip8->delay_timer;
+}
+
+void opcode_FX15(CHIP_8 *chip8, uint8_t x) {
+  chip8->delay_timer = chip8->registers[x];
+}
+
+void opcode_FX18(CHIP_8 *chip8, uint8_t x) {
+  chip8->sound_timer = chip8->registers[x];
+}
+
+void opcode_FX1E(CHIP_8 *chip8, uint8_t x) {
+  chip8->index_register = chip8->index_register + chip8->registers[x];
+}
+
+void opcode_FX0A(CHIP_8 *chip8, uint8_t x) {
+  // Stop the flow of execution 
+  bool keyfound = false;
+  for(int i = 0; i < 16; i++) {
+    if(chip8->keypad[i] == 1) {
+      keyfound = true;
+      break;
+    }
+  }
+  if(!keyfound)
+   chip8->pc -= 2;
+}
+
+void opcode_FX29(CHIP_8 *chip8, uint8_t x) {
+  // Set the index register to the address of the corresponding sprite of V[x] 
+  chip8->index_register = chip8->memory[FONT_START_ADDRESS + (x * 5)];
+}
+
+void opcode_FX33(CHIP_8 *chip8, uint8_t x) {
+  // TODO: 
+  uint8_t hundreds = (x / 100) % 10;
+  uint8_t tens = (x / 10) % 10;
+  uint8_t ones = (x / 1) % 10;
+
+  chip8->memory[chip8->index_register] = ones;
+  chip8->memory[chip8->index_register + 1] = tens;
+  chip8->memory[chip8->index_register + 2] = hundreds;
+}
+
+void opcode_FX55(CHIP_8 *chip8, uint8_t x) {
+  if(x == 0)
+    chip8->memory[chip8->index_register] = chip8->registers[0];
+  return;
+  int current_address = chip8->index_register;
+  for(int i = 0; i <= x; i++) {
+    chip8->memory[current_address] = chip8->registers[i];
+    current_address += 1;
+  }
+}
+
+void opcode_FX65(CHIP_8 *chip8, uint8_t x) {
+  if(x == 0)
+    chip8->registers[0] = chip8->memory[chip8->index_register];
+  return;
+  int current_address = chip8->index_register;
+  for(int i = 0; i <= x; i++) {
+    chip8->registers[i] = chip8->memory[current_address];
+    current_address += 1;
+  }
+}
 
 // Function to initialize the CHIP-8
 int initialize(CHIP_8 *chip8, char* filename) {
@@ -180,6 +395,8 @@ void emulate_cycle(CHIP_8 *chip8) {
     case 0x00E0:
       opcode_00E0(chip8);
       break;
+    case 0x3000:
+      opcode_3XKK(chip8, x, nn);
   }
 }
 
