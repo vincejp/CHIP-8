@@ -207,49 +207,54 @@ void opcode_8XY4(CHIP_8 *chip8, uint8_t x, uint8_t y) {
   // Set VX to be the value of VX plus VY
   // Set the carry flag if the result is larger than 255
   uint16_t result = chip8->registers[x] + chip8->registers[y];
+  chip8->registers[x] = chip8->registers[x] + chip8->registers[y];
   if(result > 255)
     chip8->registers[0xF] = 1;
-  chip8->registers[x] = chip8->registers[x] + chip8->registers[y];
+  else
+    chip8->registers[0xF] = 0; 
 }
 
 void opcode_8XY5(CHIP_8 *chip8, uint8_t x, uint8_t y) {
+  chip8->registers[x] -= chip8->registers[y];
   if(chip8->registers[x] > chip8->registers[y])
-    chip8->registers[0xF] = 1;
+    chip8->registers[0xF] = 0;
   else  
-    chip8->registers[0xF] = 0; 
-  chip8->registers[x] = chip8->registers[x] - chip8->registers[y];
+    chip8->registers[0xF] = 1; 
+  
 }
 
 void opcode_8XY6(CHIP_8 *chip8, uint8_t x, uint8_t y) {
   // Get the least significant bit of v[x]
   uint8_t lsb = chip8->registers[x] & 0x01;
   // Set the flag register
+  chip8->registers[x] = chip8->registers[x] >> 1;
   if(lsb == 1)
     chip8->registers[0xF] = 1; 
   else
     chip8->registers[0xF] = 0;
   // Then divide by two 
-  chip8->registers[x] = chip8->registers[x] >> 1;
+  
 }
 
-void opcode_8XY7(CHIP_8 *chip8, uint8_t x, uint8_t y) {
+void opcode_8XY7(CHIP_8 *chip8, int8_t x, int8_t y) {
+  chip8->registers[x] = chip8->registers[y] - chip8->registers[x];
   if(chip8->registers[y] > chip8->registers[x])
     chip8->registers[0xF] = 1;
   else
     chip8->registers[0xF] = 0; 
-  chip8->registers[x] = chip8->registers[y] - chip8->registers[x];
+  
 }
 
 void opcode_8XYE(CHIP_8 *chip8, uint8_t x, uint8_t y) {
   // Get the bit that will be shifted out 
-  uint8_t lsb = chip8->registers[x] & 0x01;
+  
+  uint8_t msb = (chip8->registers[x] & 0xF0u) >> 7u;
   // Set the flag register
-  if(lsb == 1)
-    chip8->registers[0xF] = 1; 
-  else
-    chip8->registers[0xF] = 0;
+  chip8->registers[x] <<= 1;
+  chip8->registers[0xF] = msb; 
   // Then shift(multiply by two)
-  chip8->registers[x] = chip8->registers[x] << 1;
+  
+  
 }
 
 void opcode_BNNN(CHIP_8 *chip8, uint16_t nnn) {

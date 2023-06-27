@@ -92,7 +92,7 @@ void opcode_8XY5(CHIP_8 *chip8, uint8_t x, uint8_t y);
 void opcode_8XY6(CHIP_8 *chip8, uint8_t x, uint8_t y); 
 
 
-void opcode_8XY7(CHIP_8 *chip8, uint8_t x, uint8_t y); 
+void opcode_8XY7(CHIP_8 *chip8, int8_t x, int8_t y); 
 
 
 void opcode_8XYE(CHIP_8 *chip8, uint8_t x, uint8_t y); 
