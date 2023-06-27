@@ -20,6 +20,17 @@ void show_int(int x)
 {
     show_bytes((byte_pointer) &x, sizeof(int));
 }
+
+void register_dump(CHIP_8 * chip8) {
+  for(int i = 0; i < 16; i++) {
+    printf("\nRegister: %d, Value: %d\n", i, chip8->registers[i]);
+  }
+}
+void memory_dump(CHIP_8 * chip8, uint8_t x) {
+  for(int i = 0; i <= x; i++) {
+    printf("Memory location: %d, Value: %d\n", chip8->index_register + i, chip8->memory[i + chip8->index_register]);
+  }
+}
 // Addresses where the font starts and ends in our emulated memory
 const uint8_t FONT_START_ADDRESS = 0x50;
 uint8_t font[FONT_ARRAY_SIZE] = {
@@ -176,20 +187,20 @@ void opcode_9XY0(CHIP_8 *chip8, uint8_t x, uint8_t y) {
 
 // Set VX's value to be that of VY */
 void opcode_8XY0(CHIP_8 *chip8, uint8_t x, uint8_t y) {
-  chip8->registers[y] = chip8->registers[x];
+  chip8->registers[x] = chip8->registers[y];
 }
 
 // Set VX to the logical OR of VX and VY */
 void opcode_8XY1(CHIP_8 *chip8, uint8_t x, uint8_t y) {
-  chip8->registers[x] = x | y;
+  chip8->registers[x] = chip8->registers[x] | chip8->registers[y];
 }
 
 void opcode_8XY2(CHIP_8 *chip8, uint8_t x, uint8_t y) {
-  chip8->registers[x] = x & y;
+  chip8->registers[x] = chip8->registers[x] & chip8->registers[y];
 }
 
 void opcode_8XY3(CHIP_8 *chip8, uint8_t x, uint8_t y) {
-  chip8->registers[x] = x ^ y;
+  chip8->registers[x] = chip8->registers[x] ^ chip8->registers[y];
 }
 
 void opcode_8XY4(CHIP_8 *chip8, uint8_t x, uint8_t y) {
@@ -283,7 +294,7 @@ void opcode_FX18(CHIP_8 *chip8, uint8_t x) {
 }
 
 void opcode_FX1E(CHIP_8 *chip8, uint8_t x) {
-  chip8->index_register = chip8->index_register + chip8->registers[x];
+  chip8->index_register += chip8->registers[x];
 }
 
 void opcode_FX0A(CHIP_8 *chip8, uint8_t x) {
@@ -306,34 +317,27 @@ void opcode_FX29(CHIP_8 *chip8, uint8_t x) {
 
 void opcode_FX33(CHIP_8 *chip8, uint8_t x) {
   // TODO: 
-  uint8_t hundreds = (x / 100) % 10;
-  uint8_t tens = (x / 10) % 10;
-  uint8_t ones = (x / 1) % 10;
-
-  chip8->memory[chip8->index_register] = ones;
+  printf("Shifting: %d\n",x);
+  uint8_t hundreds = (chip8->registers[x] / 100) % 10;
+  uint8_t tens = (chip8->registers[x] / 10) % 10;
+  uint8_t ones = (chip8->registers[x] / 1) % 10;
+  printf("Hundreds: %d\n",hundreds);
+  printf("Tens: %d\n",tens);
+  printf("Ones: %d\n",ones);
+  chip8->memory[chip8->index_register] = hundreds;
   chip8->memory[chip8->index_register + 1] = tens;
-  chip8->memory[chip8->index_register + 2] = hundreds;
+  chip8->memory[chip8->index_register + 2] = ones;
 }
 
 void opcode_FX55(CHIP_8 *chip8, uint8_t x) {
-  if(x == 0)
-    chip8->memory[chip8->index_register] = chip8->registers[0];
-  return;
-  int current_address = chip8->index_register;
-  for(int i = 0; i <= x; i++) {
-    chip8->memory[current_address] = chip8->registers[i];
-    current_address += 1;
+  for(uint8_t i = 0; i < x + 1; i++) {
+    chip8->memory[chip8->index_register + i] = chip8->registers[i];
   }
 }
 
 void opcode_FX65(CHIP_8 *chip8, uint8_t x) {
-  if(x == 0)
-    chip8->registers[0] = chip8->memory[chip8->index_register];
-  return;
-  int current_address = chip8->index_register;
-  for(int i = 0; i <= x; i++) {
-    chip8->registers[i] = chip8->memory[current_address];
-    current_address += 1;
+  for(uint8_t i = 0; i <= x; i++) {
+    chip8->registers[i] = chip8->memory[chip8->index_register + i];
   }
 }
 
@@ -416,6 +420,7 @@ void emulate_cycle(CHIP_8 *chip8) {
           }
           break; 
       }
+    break;
     case 0x3000:
       opcode_3XKK(chip8, x, nn);
       break;
@@ -429,6 +434,7 @@ void emulate_cycle(CHIP_8 *chip8) {
       switch(chip8->opcode & 0xF00F) {
        case 0x8000:
         opcode_8XY0(chip8, x, y);
+        break;
        case 0x8001:
         opcode_8XY1(chip8, x, y);
         break;
@@ -475,11 +481,11 @@ void emulate_cycle(CHIP_8 *chip8) {
       }
      break;
     case 0xF000:
-      switch(chip8->opcode & 0xF00F) {
+       switch(chip8->opcode & 0xF00F) {
         case 0xF00A:
           opcode_FX0A(chip8, x);
           break;
-        default:
+       case 0xF007:
           opcode_FX07(chip8, x);
           break;
       }
@@ -494,7 +500,6 @@ void emulate_cycle(CHIP_8 *chip8) {
         case 0xF01E:
           opcode_FX1E(chip8, x); 
           break;
-
         case 0xF029:
           opcode_FX29(chip8, x);
           break;
@@ -508,6 +513,6 @@ void emulate_cycle(CHIP_8 *chip8) {
           opcode_FX65(chip8, x);
           break;
         }
-      break;
+     break;
   }
 }
