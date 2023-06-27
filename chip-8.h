@@ -1,12 +1,8 @@
-#include <stdio.h>
-#include <stdlib.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include <string.h>
-#include <time.h>
-#define FONT_ARRAY_SIZE 80 
 #define SCREEN_WIDTH 64
 #define SCREEN_HEIGHT 32
+
 typedef struct CHIP_8 {
   uint8_t memory[4096];
   // The display
@@ -26,7 +22,7 @@ typedef struct CHIP_8 {
   // The opcode that we want to execute
   uint16_t opcode;
   // The keypad mapping
-  uint16_t keypad[16];
+  uint16_t keypad[17];
   // Index register
   uint16_t index_register;
   bool drawFlag;
@@ -35,7 +31,6 @@ typedef struct CHIP_8 {
 
 // Function to load the font into memory 
 void load_font(CHIP_8 *chip8);
-
 // Zero out the registers
 void init_registers(CHIP_8 *chip8);
 // Zero out the memory 

@@ -1,8 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include "chip-8.h"
-
+#include <time.h>
+#define FONT_ARRAY_SIZE 80
 // The available memory to programs
 
 // Addresses where the font starts and ends in our emulated memory
@@ -281,7 +283,7 @@ void opcode_FX1E(CHIP_8 *chip8, uint8_t x) {
 void opcode_FX0A(CHIP_8 *chip8, uint8_t x) {
   // Stop the flow of execution 
   bool keyfound = false;
-  for(int i = 0; i < 16; i++) {
+  for(int i = 0; i < 17; i++) {
     if(chip8->keypad[i] == 1) {
       keyfound = true;
       break;
@@ -368,10 +370,7 @@ void emulate_cycle(CHIP_8 *chip8) {
   uint8_t nn = (chip8->opcode & 0x00FF);
   // Second, third, and fourth nibbles, 12-bit immediate memory address
   uint16_t nnn = (chip8->opcode & 0xFFF);
-  // TODO: 
-  // All of these should be passed ONLY what they require to function 
-  // And if they require more than what's given, provide a reference to the chip8 object
-  // Get the first nibble to determine the type of instruction
+
   switch(chip8->opcode & 0xF000) 
   {
     // If an instruction to set the index register is called
@@ -397,6 +396,78 @@ void emulate_cycle(CHIP_8 *chip8) {
       break;
     case 0x3000:
       opcode_3XKK(chip8, x, nn);
+    case 0x4000:
+      opcode_4XKK(chip8, x, nn);
+    case 0x5000:
+      opcode_5XY0(chip8, x, y);
+    case 0x8000:
+      opcode_8XY0(chip8, x, y);
+    case 0x9000:
+      opcode_9XY0(chip8, x, y);
+    case 0x8001:
+      opcode_8XY1(chip8, x, y);
+    case 0x8002:
+      opcode_8XY2(chip8, x, y);
+      break;
+    case 0x8003:
+      opcode_8XY3(chip8, x, y);
+      break;
+    case 0x8004:
+      opcode_8XY4(chip8, x, y);
+      break;
+    case 0x8005:
+      opcode_8XY5(chip8, x, y);
+      break;
+    case 0x8006:
+      opcode_8XY6(chip8, x, y);
+      break;
+    case 0x8007:
+      opcode_8XY7(chip8, x, y);
+      break;
+    case 0x800E:
+      opcode_8XYE(chip8, x, y);
+      break;
+    case 0xB000:
+      opcode_BNNN(chip8, nnn);
+      break;
+    case 0xC000:
+      opcode_CXKK(chip8, x, nn);
+      break;
+    case 0xE00E:
+      opcode_EX9E(chip8, x);
+      break;
+    case 0xE0A1:
+      opcode_EXA1(chip8, x);
+      break;
+    case 0xF007:
+      opcode_FX07(chip8, x);
+      break;
+    case 0xF015:
+      opcode_FX15(chip8, x);
+      break;
+    case 0xF018:
+      opcode_FX18(chip8, x);
+      break;
+    case 0xF01E:
+      opcode_FX1E(chip8, x); 
+      break;
+    case 0xF00A:
+      opcode_FX0A(chip8, x);
+      break;
+    case 0xF029:
+      opcode_FX29(chip8, x);
+      break;
+    case 0xF033:
+      opcode_FX33(chip8, x); 
+      break;
+    case 0xF055:
+      opcode_FX55(chip8, x);
+      break;
+    case 0xF065:
+      opcode_FX65(chip8, x);
+      break;
+    default:
+      break;
   }
 }
 
