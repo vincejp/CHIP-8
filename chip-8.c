@@ -6,10 +6,22 @@
 #include <time.h>
 #define FONT_ARRAY_SIZE 80
 // The available memory to programs
+typedef unsigned char *byte_pointer;
 
+void show_bytes(byte_pointer start, int len)
+{
+    int i;
+    for (i = 0; i < len; i++)
+	printf(" %.2x", start[i]);
+    printf("\n");
+}
+
+void show_int(int x)
+{
+    show_bytes((byte_pointer) &x, sizeof(int));
+}
 // Addresses where the font starts and ends in our emulated memory
 const uint8_t FONT_START_ADDRESS = 0x50;
-const uint8_t FONT_END_ADDRESS = 0x9F;
 uint8_t font[FONT_ARRAY_SIZE] = {
 0xF0, 0x90, 0x90, 0x90, 0xF0, 
 0x20, 0x60, 0x20, 0x20, 0x70, 
@@ -57,37 +69,30 @@ void opcode_00E0(CHIP_8 *chip8) {
     chip8->display[i] = chip8->display[i] & 0x00;
   }
   chip8->drawFlag = true;
-};
+}
 
 // Jump instruction - DONE, not tested
 void opcode_1NNN(CHIP_8 *chip8) {
-  chip8->pc = chip8->opcode & 0x0FFF;
-};
+  chip8->pc = chip8->opcode & 0x0FFFu;
+}
 
 // Set register VX - DONE, not tested
 void opcode_6XNN(CHIP_8 *chip8) {
     uint16_t reg_buffer = chip8->opcode & 0x0F00;
     reg_buffer = reg_buffer >> 8; 
     chip8->registers[reg_buffer] = chip8->opcode & 0x00FF;
-};
+}
 
 // Add value to register VX - DONE, not tested
-void opcode_7XNN(CHIP_8 *chip8) {
-  // Store the number containing the third byte in a buffer;
-    uint16_t reg_buffer = chip8->opcode & 0x0F00;
-  // Shift right by 8 bits to make it a valid address;
-    reg_buffer = reg_buffer >> 8; 
-    // Get the value that should be at that address, as a 16 bit integer
-    // Cast it to be an 8-bit integer
-    uint8_t value = (uint8_t)(chip8->opcode & 0x00FF);
+void opcode_7XNN(CHIP_8 *chip8, uint8_t x, uint8_t nn) {
     // Add the value to the address
-    chip8->registers[reg_buffer] += value;
-};
+    chip8->registers[x] += nn;
+}
 
 // Set index register I - DONE, not tested;
 void opcode_ANNN(CHIP_8 *chip8) {
   chip8->index_register = chip8->opcode & 0x0FFF;
-};
+}
 
 
 
@@ -116,14 +121,15 @@ void opcode_DXYN(CHIP_8 *chip8, uint8_t x, uint8_t y, uint8_t n) {
     }
   }
   chip8->drawFlag = true;
-};
+}
 
 void opcode_2NNN(CHIP_8 * chip8, uint16_t nnn) {
   // CALL the subroutine at memory location NNN
   // increment the stack pointer
-  chip8->stack_ptr += 1;
   // Then put the current program counter at the top of the stack 
+  
   chip8->stack[chip8->stack_ptr] = chip8->pc;
+  chip8->stack_ptr += 1;
   // Then PC is set to nnn 
   chip8->pc = nnn; 
 }
@@ -133,11 +139,11 @@ void opcode_00EE(CHIP_8 * chip8) {
   // Remove the last address from the stack
   
   // Get the address of the last element in the stack
-  uint16_t last_address = chip8->stack[chip8->stack_ptr];
   // Eliminate the value 
-  chip8->stack[chip8->stack_ptr] = 0;
-  // Decrement the stack pointer 
   chip8->stack_ptr -= 1;
+  chip8->pc = chip8->stack[chip8->stack_ptr];
+  // Decrement the stack pointer 
+  
 }
 // Conditional branch instructions 
 // TODO: Edit function headers
@@ -361,16 +367,16 @@ void emulate_cycle(CHIP_8 *chip8) {
   chip8->opcode |= chip8->memory[chip8->pc + 1];
   chip8->pc += 2;
   // Second nibble, used to look up a register
-  uint8_t x = (chip8->opcode & 0x0F00) >> 8;
+  uint8_t x = (chip8->opcode & 0x0F00u) >> 8u;
   // Third nibble, used to up a register
-  uint8_t y = (chip8->opcode & 0x00F0) >> 4;
+  uint8_t y = (chip8->opcode & 0x00F0u) >> 4u;
   // Last nibble, a 4 bit number
-  uint8_t n = (chip8->opcode & 0x000F);
+  uint8_t n = (chip8->opcode & 0x000Fu);
   // Second byte, 8-bit immediate number
-  uint8_t nn = (chip8->opcode & 0x00FF);
+  uint8_t nn = (chip8->opcode & 0x00FFu);
   // Second, third, and fourth nibbles, 12-bit immediate memory address
-  uint16_t nnn = (chip8->opcode & 0xFFF);
-
+  uint16_t nnn = (chip8->opcode & 0xFFFu);
+  
   switch(chip8->opcode & 0xF000) 
   {
     // If an instruction to set the index register is called
@@ -385,47 +391,72 @@ void emulate_cycle(CHIP_8 *chip8) {
     case 0x6000:
       opcode_6XNN(chip8);
       break;
+    // For some reason, this instruction makes the program go into an infinite loop 
+    // For that, it shall be imprisoned in the comments until further notice
+    case 0x2000:
+      opcode_2NNN(chip8, nnn);
+      break;
     case 0x7000:
-      opcode_7XNN(chip8);
+      opcode_7XNN(chip8, x, nn);
       break;
     case 0xD000:
       opcode_DXYN(chip8, x, y, n);
       break;
-    case 0x00E0:
-      opcode_00E0(chip8);
-      break;
+    case 0x0000:
+      switch(chip8->opcode & 0x00E0) {
+        case 0x00E0:
+          switch(chip8->opcode & 0x00EE) {
+            case 0x00EE:
+              opcode_00EE(chip8);
+              break;
+            case 0x00E0:
+              opcode_00E0(chip8);
+              break; 
+            break;
+          }
+          break; 
+      }
     case 0x3000:
       opcode_3XKK(chip8, x, nn);
+      break;
     case 0x4000:
       opcode_4XKK(chip8, x, nn);
+      break; 
     case 0x5000:
       opcode_5XY0(chip8, x, y);
+      break;
     case 0x8000:
-      opcode_8XY0(chip8, x, y);
+      switch(chip8->opcode & 0xF00F) {
+       case 0x8000:
+        opcode_8XY0(chip8, x, y);
+       case 0x8001:
+        opcode_8XY1(chip8, x, y);
+        break;
+      case 0x8002:
+        opcode_8XY2(chip8, x, y);
+        break;
+      case 0x8003:
+        opcode_8XY3(chip8, x, y);
+        break;
+      case 0x8004:
+        opcode_8XY4(chip8, x, y);
+        break;
+      case 0x8005:
+        opcode_8XY5(chip8, x, y);
+        break;
+      case 0x8006:
+        opcode_8XY6(chip8, x, y);
+        break;
+      case 0x8007:
+        opcode_8XY7(chip8, x, y);
+        break;
+      case 0x800E:
+        opcode_8XYE(chip8, x, y);
+        break;
+      }
+      break; 
     case 0x9000:
       opcode_9XY0(chip8, x, y);
-    case 0x8001:
-      opcode_8XY1(chip8, x, y);
-    case 0x8002:
-      opcode_8XY2(chip8, x, y);
-      break;
-    case 0x8003:
-      opcode_8XY3(chip8, x, y);
-      break;
-    case 0x8004:
-      opcode_8XY4(chip8, x, y);
-      break;
-    case 0x8005:
-      opcode_8XY5(chip8, x, y);
-      break;
-    case 0x8006:
-      opcode_8XY6(chip8, x, y);
-      break;
-    case 0x8007:
-      opcode_8XY7(chip8, x, y);
-      break;
-    case 0x800E:
-      opcode_8XYE(chip8, x, y);
       break;
     case 0xB000:
       opcode_BNNN(chip8, nnn);
@@ -433,42 +464,50 @@ void emulate_cycle(CHIP_8 *chip8) {
     case 0xC000:
       opcode_CXKK(chip8, x, nn);
       break;
-    case 0xE00E:
-      opcode_EX9E(chip8, x);
-      break;
-    case 0xE0A1:
-      opcode_EXA1(chip8, x);
-      break;
-    case 0xF007:
-      opcode_FX07(chip8, x);
-      break;
-    case 0xF015:
-      opcode_FX15(chip8, x);
-      break;
-    case 0xF018:
-      opcode_FX18(chip8, x);
-      break;
-    case 0xF01E:
-      opcode_FX1E(chip8, x); 
-      break;
-    case 0xF00A:
-      opcode_FX0A(chip8, x);
-      break;
-    case 0xF029:
-      opcode_FX29(chip8, x);
-      break;
-    case 0xF033:
-      opcode_FX33(chip8, x); 
-      break;
-    case 0xF055:
-      opcode_FX55(chip8, x);
-      break;
-    case 0xF065:
-      opcode_FX65(chip8, x);
-      break;
-    default:
+    case 0xE000:
+      switch(chip8->opcode & 0xF00F) {
+        case 0xE00E:
+          opcode_EX9E(chip8, x);
+          break;
+        default:
+          opcode_EXA1(chip8, x);
+          break;
+      }
+     break;
+    case 0xF000:
+      switch(chip8->opcode & 0xF00F) {
+        case 0xF00A:
+          opcode_FX0A(chip8, x);
+          break;
+        default:
+          opcode_FX07(chip8, x);
+          break;
+      }
+     
+      switch(chip8->opcode & 0xF0FF) {
+        case 0xF015:
+          opcode_FX15(chip8, x);
+          break;
+        case 0xF018:
+          opcode_FX18(chip8, x);
+          break;
+        case 0xF01E:
+          opcode_FX1E(chip8, x); 
+          break;
+
+        case 0xF029:
+          opcode_FX29(chip8, x);
+          break;
+        case 0xF033:
+          opcode_FX33(chip8, x); 
+          break;
+        case 0xF055:
+          opcode_FX55(chip8, x);
+          break;
+        case 0xF065:
+          opcode_FX65(chip8, x);
+          break;
+        }
       break;
   }
 }
-
-
