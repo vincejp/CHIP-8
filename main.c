@@ -3,12 +3,12 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-int main(void)
+int main(int argc, char* argv[])
 {
   bool quit = false;
   CHIP_8 chip8;
   SDL_Init(SDL_INIT_VIDEO);
-  if(initialize(&chip8, "test_opcode.ch8") == -1)
+  if(initialize(&chip8, argv[1]) == -1)
   {
     printf("Error initializing ROM");
     return -1;

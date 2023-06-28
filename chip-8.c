@@ -5,21 +5,6 @@
 #include "chip-8.h"
 #include <time.h>
 #define FONT_ARRAY_SIZE 80
-// The available memory to programs
-typedef unsigned char *byte_pointer;
-
-void show_bytes(byte_pointer start, int len)
-{
-    int i;
-    for (i = 0; i < len; i++)
-	printf(" %.2x", start[i]);
-    printf("\n");
-}
-
-void show_int(int x)
-{
-    show_bytes((byte_pointer) &x, sizeof(int));
-}
 
 void register_dump(CHIP_8 * chip8) {
   for(int i = 0; i < 16; i++) {
@@ -215,12 +200,9 @@ void opcode_8XY4(CHIP_8 *chip8, uint8_t x, uint8_t y) {
 }
 
 void opcode_8XY5(CHIP_8 *chip8, uint8_t x, uint8_t y) {
+  uint8_t carry = chip8->registers[y] <= chip8->registers[x];
   chip8->registers[x] -= chip8->registers[y];
-  if(chip8->registers[x] > chip8->registers[y])
-    chip8->registers[0xF] = 0;
-  else  
-    chip8->registers[0xF] = 1; 
-  
+  chip8->registers[0xF] = carry;
 }
 
 void opcode_8XY6(CHIP_8 *chip8, uint8_t x, uint8_t y) {
