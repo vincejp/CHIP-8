@@ -6,6 +6,7 @@
 #include <time.h>
 #define FONT_ARRAY_SIZE 80
 
+
 void register_dump(CHIP_8 * chip8) {
   for(int i = 0; i < 16; i++) {
     printf("\nRegister: %d, Value: %d\n", i, chip8->registers[i]);
@@ -15,6 +16,15 @@ void memory_dump(CHIP_8 * chip8, uint8_t x) {
   for(int i = 0; i <= x; i++) {
     printf("Memory location: %d, Value: %d\n", chip8->index_register + i, chip8->memory[i + chip8->index_register]);
   }
+}
+
+void keypad_dump(CHIP_8 * chip8) {
+  for(int i = 0; i < 16; i++) {
+    printf("Keypad[%d]: %d\n", i, chip8->keypad[i]);
+  }
+}
+void execution(CHIP_8 * chip8) {
+  printf("Currently executing: %d\n", chip8->opcode);
 }
 // Addresses where the font starts and ends in our emulated memory
 const uint8_t FONT_START_ADDRESS = 0x50;
@@ -62,7 +72,7 @@ void init_memory(CHIP_8 *chip8) {
 void opcode_00E0(CHIP_8 *chip8) {
   // Turn off all pixels in the display array
   for(int i = 0; i < SCREEN_WIDTH * SCREEN_HEIGHT; i++) {
-    chip8->display[i] = chip8->display[i] & 0x00;
+    chip8->display[i] = chip8->display[i] & 0x0000;
   }
   chip8->drawFlag = true;
 }
@@ -70,6 +80,21 @@ void opcode_00E0(CHIP_8 *chip8) {
 // Jump instruction - DONE, not tested
 void opcode_1NNN(CHIP_8 *chip8) {
   chip8->pc = chip8->opcode & 0x0FFFu;
+}
+
+void opcode_8XYE(CHIP_8 *chip8, uint8_t x, uint8_t y) {
+  // TODO 
+  // Get the bit that will be shifted out 
+  uint8_t msb = (chip8->registers[x] & 0xF0u) >> 7u;
+  // Set the flag register
+  chip8->registers[x] <<= 1;
+  chip8->registers[0xF] = msb; 
+  // Then shift(multiply by two)
+}
+
+void opcode_BNNN(CHIP_8 *chip8, uint16_t nnn) {
+  // Jump to address nnn + v[0]
+  chip8->pc = nnn + chip8->registers[0];
 }
 
 // Set register VX - DONE, not tested
@@ -116,7 +141,6 @@ void opcode_DXYN(CHIP_8 *chip8, uint8_t x, uint8_t y, uint8_t n) {
       }
     }
   }
-  chip8->drawFlag = true;
 }
 
 void opcode_2NNN(CHIP_8 * chip8, uint16_t nnn) {
@@ -227,27 +251,11 @@ void opcode_8XY7(CHIP_8 *chip8, int8_t x, int8_t y) {
   
 }
 
-void opcode_8XYE(CHIP_8 *chip8, uint8_t x, uint8_t y) {
-  // Get the bit that will be shifted out 
-  
-  uint8_t msb = (chip8->registers[x] & 0xF0u) >> 7u;
-  // Set the flag register
-  chip8->registers[x] <<= 1;
-  chip8->registers[0xF] = msb; 
-  // Then shift(multiply by two)
-  
-  
-}
-
-void opcode_BNNN(CHIP_8 *chip8, uint16_t nnn) {
-  // Jump to address nnn + v[0]
-  chip8->pc = nnn + chip8->registers[0];
-}
 
 void opcode_CXKK(CHIP_8 *chip8, uint8_t x, uint8_t nn) {
-  srand(time(NULL));
+  
   // Generate random number between 0 and 255 
-  uint8_t num = (rand() % (255 - 0 + 1)) + 0;
+  uint8_t num = (rand() % 255);
   // Binary AND the number with nn 
   num = num & nn;
   // Put the result in v[x]
@@ -256,14 +264,14 @@ void opcode_CXKK(CHIP_8 *chip8, uint8_t x, uint8_t nn) {
 
 void opcode_EX9E(CHIP_8 *chip8, uint8_t x) {
   // If keypad[x] is currently down, skip the next instruction 
-  if(chip8->keypad[x] == 1) {
+  if(chip8->keypad[chip8->registers[x]] == 1) {
     chip8->pc += 2;
   }
 }
 
 void opcode_EXA1(CHIP_8 *chip8, uint8_t x) {
   // If keypad[x] is currently up, skip the next instruction 
-  if(chip8->keypad[x] == 0) {
+  if(chip8->keypad[chip8->registers[x]] == 0) {
     chip8->pc += 2;
   }
 }
@@ -287,14 +295,15 @@ void opcode_FX1E(CHIP_8 *chip8, uint8_t x) {
 void opcode_FX0A(CHIP_8 *chip8, uint8_t x) {
   // Stop the flow of execution 
   bool keyfound = false;
-  for(int i = 0; i < 17; i++) {
+  for(int i = 0; i < 16; i++) {
     if(chip8->keypad[i] == 1) {
       keyfound = true;
       break;
     }
   }
-  if(!keyfound)
+  if(keyfound == false) {
    chip8->pc -= 2;
+  }
 }
 
 void opcode_FX29(CHIP_8 *chip8, uint8_t x) {
@@ -304,13 +313,9 @@ void opcode_FX29(CHIP_8 *chip8, uint8_t x) {
 
 void opcode_FX33(CHIP_8 *chip8, uint8_t x) {
   // TODO: 
-  printf("Shifting: %d\n",x);
   uint8_t hundreds = (chip8->registers[x] / 100) % 10;
   uint8_t tens = (chip8->registers[x] / 10) % 10;
   uint8_t ones = (chip8->registers[x] / 1) % 10;
-  printf("Hundreds: %d\n",hundreds);
-  printf("Tens: %d\n",tens);
-  printf("Ones: %d\n",ones);
   chip8->memory[chip8->index_register] = hundreds;
   chip8->memory[chip8->index_register + 1] = tens;
   chip8->memory[chip8->index_register + 2] = ones;
@@ -323,7 +328,7 @@ void opcode_FX55(CHIP_8 *chip8, uint8_t x) {
 }
 
 void opcode_FX65(CHIP_8 *chip8, uint8_t x) {
-  for(uint8_t i = 0; i <= x; i++) {
+  for(uint8_t i = 0; i < x + 1; i++) {
     chip8->registers[i] = chip8->memory[chip8->index_register + i];
   }
 }
@@ -335,6 +340,10 @@ int initialize(CHIP_8 *chip8, char* filename) {
   // Initialize the registers to be zeroed out
   init_registers(chip8);
   init_memory(chip8);
+
+  for(int i = 0; i < 16; i++) {
+    chip8->keypad[i] = 0;
+  }
   // TODO: Read in the ROM file in bytes
   FILE* file = fopen(filename, "rb");
   if(file == NULL) {
@@ -367,89 +376,36 @@ void emulate_cycle(CHIP_8 *chip8) {
   uint8_t nn = (chip8->opcode & 0x00FFu);
   // Second, third, and fourth nibbles, 12-bit immediate memory address
   uint16_t nnn = (chip8->opcode & 0xFFFu);
-  
   switch(chip8->opcode & 0xF000) 
   {
-    // If an instruction to set the index register is called
-    case 0xA000:
-      opcode_ANNN(chip8);
-      break;
-    // If a jump instruction is called
+    
+    // Here is the case where the opcode is entirely unique
     case 0x1000:
-      // Set the program counter to be the address of NNN 
       opcode_1NNN(chip8);
-      break;
-    case 0x6000:
-      opcode_6XNN(chip8);
-      break;
-    // For some reason, this instruction makes the program go into an infinite loop 
-    // For that, it shall be imprisoned in the comments until further notice
+      break; 
     case 0x2000:
       opcode_2NNN(chip8, nnn);
-      break;
-    case 0x7000:
-      opcode_7XNN(chip8, x, nn);
-      break;
-    case 0xD000:
-      opcode_DXYN(chip8, x, y, n);
-      break;
-    case 0x0000:
-      switch(chip8->opcode & 0x00E0) {
-        case 0x00E0:
-          switch(chip8->opcode & 0x00EE) {
-            case 0x00EE:
-              opcode_00EE(chip8);
-              break;
-            case 0x00E0:
-              opcode_00E0(chip8);
-              break; 
-            break;
-          }
-          break; 
-      }
-    break;
+      break; 
     case 0x3000:
       opcode_3XKK(chip8, x, nn);
       break;
     case 0x4000:
       opcode_4XKK(chip8, x, nn);
-      break; 
+      break;
     case 0x5000:
       opcode_5XY0(chip8, x, y);
       break;
-    case 0x8000:
-      switch(chip8->opcode & 0xF00F) {
-       case 0x8000:
-        opcode_8XY0(chip8, x, y);
-        break;
-       case 0x8001:
-        opcode_8XY1(chip8, x, y);
-        break;
-      case 0x8002:
-        opcode_8XY2(chip8, x, y);
-        break;
-      case 0x8003:
-        opcode_8XY3(chip8, x, y);
-        break;
-      case 0x8004:
-        opcode_8XY4(chip8, x, y);
-        break;
-      case 0x8005:
-        opcode_8XY5(chip8, x, y);
-        break;
-      case 0x8006:
-        opcode_8XY6(chip8, x, y);
-        break;
-      case 0x8007:
-        opcode_8XY7(chip8, x, y);
-        break;
-      case 0x800E:
-        opcode_8XYE(chip8, x, y);
-        break;
-      }
-      break; 
+    case 0x6000:
+      opcode_6XNN(chip8);
+      break;
+    case 0x7000:
+      opcode_7XNN(chip8, x, nn);
+      break;
     case 0x9000:
       opcode_9XY0(chip8, x, y);
+      break;
+    case 0xA000:
+      opcode_ANNN(chip8);
       break;
     case 0xB000:
       opcode_BNNN(chip8, nnn);
@@ -457,27 +413,73 @@ void emulate_cycle(CHIP_8 *chip8) {
     case 0xC000:
       opcode_CXKK(chip8, x, nn);
       break;
-    case 0xE000:
+    case 0xD000:
+      opcode_DXYN(chip8, x, y, n);
+      break;
+
+    // Here is the case where the opcode has the first three digits 00E, and the last either 0 or E
+    case 0x0000:
+      switch(chip8->opcode & 0x00FF) {
+        case 0x00EE:
+          opcode_00EE(chip8);
+          break;
+        case 0x00E0:
+          opcode_00E0(chip8);
+          break;
+      } break;
+    
+    // Here is the case where the first digit is 8 but the last digit is unique
+    case 0x8000:
       switch(chip8->opcode & 0xF00F) {
-        case 0xE00E:
+        case 0x8000:
+          opcode_8XY0(chip8, x, y);
+          break;
+        case 0x8001:
+          opcode_8XY1(chip8, x, y);
+          break;
+        case 0x8002:
+          opcode_8XY2(chip8, x, y);
+          break;
+        case 0x8003:
+          opcode_8XY3(chip8, x, y);
+          break;
+        case 0x8004:
+          opcode_8XY4(chip8, x, y);
+          break;
+        case 0x8005:
+          opcode_8XY5(chip8, x, y);
+          break;
+        case 0x8006:
+          opcode_8XY6(chip8, x, y);
+          break;
+        case 0x8007:
+          opcode_8XY7(chip8, x, y);
+          break;
+        case 0x800E:
+          opcode_8XYE(chip8, x, y);
+          break;
+    } break; 
+
+    
+    // Here is the case where the first digit repeats but the last two are unique 
+    case 0xE000:
+      switch(chip8->opcode & 0xF0FF) {
+        case 0xE09E: 
           opcode_EX9E(chip8, x);
           break;
-        default:
+        case 0xE0A1:
           opcode_EXA1(chip8, x);
           break;
-      }
-     break;
+    } break;
+
     case 0xF000:
-       switch(chip8->opcode & 0xF00F) {
+      switch(chip8->opcode & 0xF0FF) {
         case 0xF00A:
           opcode_FX0A(chip8, x);
           break;
-       case 0xF007:
+        case 0xF007:
           opcode_FX07(chip8, x);
           break;
-      }
-     
-      switch(chip8->opcode & 0xF0FF) {
         case 0xF015:
           opcode_FX15(chip8, x);
           break;
@@ -487,9 +489,7 @@ void emulate_cycle(CHIP_8 *chip8) {
         case 0xF01E:
           opcode_FX1E(chip8, x); 
           break;
-        case 0xF029:
           opcode_FX29(chip8, x);
-          break;
         case 0xF033:
           opcode_FX33(chip8, x); 
           break;
@@ -499,7 +499,6 @@ void emulate_cycle(CHIP_8 *chip8) {
         case 0xF065:
           opcode_FX65(chip8, x);
           break;
-        }
-     break;
+      } break;
   }
 }

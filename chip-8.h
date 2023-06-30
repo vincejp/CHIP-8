@@ -3,6 +3,7 @@
 #define SCREEN_WIDTH 64
 #define SCREEN_HEIGHT 32
 
+void show_int(int x);
 typedef struct CHIP_8 {
   uint8_t memory[4096];
   // The display
@@ -41,7 +42,7 @@ void opcode_00E0(CHIP_8 *chip8);
 void opcode_1NNN(CHIP_8 *chip8); 
 // Set register VX - DONE, not tested
 void opcode_6XNN(CHIP_8 *chip8); 
-
+void keypad_dump(CHIP_8 * chip8);
 // Add value to register VX - DONE, not tested
 void opcode_7XNN(CHIP_8 *chip8, uint8_t x, uint8_t nn);
 // Set index register I - DONE, not tested;
@@ -142,5 +143,4 @@ int initialize(CHIP_8 *chip8, char* filename);
 
 
 void emulate_cycle(CHIP_8 *chip8); 
-
 
