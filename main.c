@@ -24,10 +24,9 @@ int main(int argc, char* argv[])
   SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, 0);
   SDL_Texture *texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_UNKNOWN, SDL_TEXTUREACCESS_STREAMING, 64, 32);
   memset(chip8.display, 0, 64 * 32 * sizeof(uint32_t));
-  SDL_Event event;
-
   while (!quit)
   {
+      SDL_Event event;
       while(SDL_PollEvent(&event))
       {
         switch(event.type) {
@@ -137,10 +136,11 @@ int main(int argc, char* argv[])
           } break;
         }
       }
+      
       // Get the time at the start 
       const uint64_t start_frame_time = SDL_GetPerformanceCounter();
       for(int i = 0; i < instructions_per_second / 60; i++) {
-         emulate_cycle(&chip8);
+        emulate_cycle(&chip8);
       }
       const uint64_t end_frame_time = SDL_GetPerformanceCounter();
       const double time_elapsed = (double)((end_frame_time - start_frame_time) * 1000) / SDL_GetPerformanceFrequency();
@@ -153,7 +153,7 @@ int main(int argc, char* argv[])
         chip8.delay_timer -= 1;
       } 
   }
-
+  
   SDL_DestroyWindow(window);
   SDL_DestroyTexture(texture);
   SDL_DestroyRenderer(renderer);

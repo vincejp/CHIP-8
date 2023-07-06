@@ -3,7 +3,9 @@
 #define SCREEN_WIDTH 64
 #define SCREEN_HEIGHT 32
 
+typedef unsigned char *byte_pointer;
 void show_int(int x);
+void show_bytes(byte_pointer start, int len);
 typedef struct CHIP_8 {
   uint8_t memory[4096];
   // The display
@@ -23,7 +25,7 @@ typedef struct CHIP_8 {
   // The opcode that we want to execute
   uint16_t opcode;
   // The keypad mapping
-  uint16_t keypad[17];
+  uint16_t keypad[16];
   // Index register
   uint16_t index_register;
   bool drawFlag;
@@ -39,15 +41,14 @@ void init_memory(CHIP_8 *chip8);
 // Clear the screen - DONE not tested
 void opcode_00E0(CHIP_8 *chip8);
 // Jump instruction - DONE, not tested
-void opcode_1NNN(CHIP_8 *chip8); 
+void opcode_1NNN(CHIP_8 *chip8, uint16_t nnn);
 // Set register VX - DONE, not tested
-void opcode_6XNN(CHIP_8 *chip8); 
+void opcode_6XNN(CHIP_8 *chip8, uint8_t x, uint8_t nn);
 void keypad_dump(CHIP_8 * chip8);
 // Add value to register VX - DONE, not tested
 void opcode_7XNN(CHIP_8 *chip8, uint8_t x, uint8_t nn);
 // Set index register I - DONE, not tested;
-void opcode_ANNN(CHIP_8 *chip8);
-
+void opcode_ANNN(CHIP_8 *chip8, uint16_t nnn);
 // Display/draw 
 void opcode_DXYN(CHIP_8 *chip8, uint8_t x, uint8_t y, uint8_t n); 
 
@@ -143,4 +144,5 @@ int initialize(CHIP_8 *chip8, char* filename);
 
 
 void emulate_cycle(CHIP_8 *chip8); 
-
+void memory_dump(CHIP_8 * chip8, uint8_t x);
+void execution(CHIP_8 * chip8);
