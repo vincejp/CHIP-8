@@ -6,7 +6,7 @@
 typedef struct CHIP_8 {
   // Available system memory 
   uint8_t memory[4096];
-  // 
+  // Display which is 64 pixels wide by 32 pixels tall
   uint32_t display[SCREEN_WIDTH * SCREEN_HEIGHT];
   // Program counter 
   uint16_t pc; 
