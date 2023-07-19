@@ -1,5 +1,5 @@
 # CHIP-8
-This is my CHIP-8 interpreter/emulator written in C!
+This is my CHIP-8 interpreter/emulator written in C and SDL2!
 <br></br>
 Below are examples of the interpreter in action.
 
