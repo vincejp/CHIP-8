@@ -1,3 +1,5 @@
+# Adapted from: https://github.com/tlively/sdl_seminar
+
 # A simple Makefile for compiling small SDL projects
 
 # set the compiler
