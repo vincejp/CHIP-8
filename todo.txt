@@ -1,7 +1,0 @@
-TODO:
-
-1. Make keyboard input functional 
-2. Create a clock for timing
-3. Debug 
-
-Right now there are no problems other than these
