@@ -3,146 +3,115 @@
 #define SCREEN_WIDTH 64
 #define SCREEN_HEIGHT 32
 
-typedef unsigned char *byte_pointer;
-void show_int(int x);
-void show_bytes(byte_pointer start, int len);
 typedef struct CHIP_8 {
+  // Available system memory 
   uint8_t memory[4096];
-  // The display
+  // 
   uint32_t display[SCREEN_WIDTH * SCREEN_HEIGHT];
-  // Program counter, to store the current executing instruction
+  // Program counter 
   uint16_t pc; 
-  // Stack, to store the order of execution
+  // 16 level stack 
   uint16_t stack[16];
-  // Stack pointer to keep track of where we are in the stack
+  // Stack pointer to determine location on the stack 
   uint8_t stack_ptr;
-  // Delay timer for timing 
   uint8_t delay_timer;
-  // Sound timer for sound 
   uint8_t sound_timer;
-  // 16 eight bit general purpose registers
+  // 16 eight bit registers, registers[0xF] is the flag register
   uint8_t registers[16];
-  // The opcode that we want to execute
+  // Current opcode being executed 
   uint16_t opcode;
-  // The keypad mapping
+  // Keypad 
   uint16_t keypad[16];
-  // Index register
+  // Index register that points at memory locations 
   uint16_t index_register;
+  // Flag to indicate whether something has been drawn to the screen 
   bool drawFlag;
 } CHIP_8;
-/* All available opcodes */
 
-// Function to load the font into memory 
 void load_font(CHIP_8 *chip8);
-// Zero out the registers
+
 void init_registers(CHIP_8 *chip8);
-// Zero out the memory 
+
 void init_memory(CHIP_8 *chip8);
-// Clear the screen - DONE not tested
+
 void opcode_00E0(CHIP_8 *chip8);
-// Jump instruction - DONE, not tested
+
 void opcode_1NNN(CHIP_8 *chip8, uint16_t nnn);
-// Set register VX - DONE, not tested
+
 void opcode_6XNN(CHIP_8 *chip8, uint8_t x, uint8_t nn);
+
 void keypad_dump(CHIP_8 * chip8);
-// Add value to register VX - DONE, not tested
+
 void opcode_7XNN(CHIP_8 *chip8, uint8_t x, uint8_t nn);
-// Set index register I - DONE, not tested;
+
 void opcode_ANNN(CHIP_8 *chip8, uint16_t nnn);
-// Display/draw 
+
 void opcode_DXYN(CHIP_8 *chip8, uint8_t x, uint8_t y, uint8_t n); 
 
 void opcode_2NNN(CHIP_8 * chip8, uint16_t nnn); 
 
-
 void opcode_00EE(CHIP_8 * chip8); 
-
 
 void opcode_3XKK(CHIP_8 * chip8, uint8_t x, uint8_t nn); 
 
 void opcode_4XKK(CHIP_8 * chip8, uint8_t x, uint8_t nn); 
 
-
 void opcode_5XY0(CHIP_8 *chip8, uint8_t x, uint8_t y); 
-
 
 void opcode_9XY0(CHIP_8 *chip8, uint8_t x, uint8_t y); 
 
-
-/* Logical and arithemtic instructions */
-
-// Set VX's value to be that of VY */
 void opcode_8XY0(CHIP_8 *chip8, uint8_t x, uint8_t y); 
 
-
-// Set VX to the logical OR of VX and VY */
 void opcode_8XY1(CHIP_8 *chip8, uint8_t x, uint8_t y); 
-
 
 void opcode_8XY2(CHIP_8 *chip8, uint8_t x, uint8_t y); 
 
-
 void opcode_8XY3(CHIP_8 *chip8, uint8_t x, uint8_t y); 
-
 
 void opcode_8XY4(CHIP_8 *chip8, uint8_t x, uint8_t y); 
 
-
 void opcode_8XY5(CHIP_8 *chip8, uint8_t x, uint8_t y); 
-
 
 void opcode_8XY6(CHIP_8 *chip8, uint8_t x, uint8_t y); 
 
-
 void opcode_8XY7(CHIP_8 *chip8, int8_t x, int8_t y); 
-
 
 void opcode_8XYE(CHIP_8 *chip8, uint8_t x, uint8_t y); 
 
-
 void opcode_BNNN(CHIP_8 *chip8, uint16_t nnn); 
-
 
 void opcode_CXKK(CHIP_8 *chip8, uint8_t x, uint8_t nn); 
 
-
 void opcode_EX9E(CHIP_8 *chip8, uint8_t x); 
-
 
 void opcode_EXA1(CHIP_8 *chip8, uint8_t x); 
 
-
 void opcode_FX07(CHIP_8 *chip8, uint8_t x); 
-
 
 void opcode_FX15(CHIP_8 *chip8, uint8_t x); 
 
-
 void opcode_FX18(CHIP_8 *chip8, uint8_t x); 
-
 
 void opcode_FX1E(CHIP_8 *chip8, uint8_t x); 
 
-
 void opcode_FX0A(CHIP_8 *chip8, uint8_t x); 
-
 
 void opcode_FX29(CHIP_8 *chip8, uint8_t x); 
 
-
 void opcode_FX33(CHIP_8 *chip8, uint8_t x); 
-
 
 void opcode_FX55(CHIP_8 *chip8, uint8_t x); 
 
-
 void opcode_FX65(CHIP_8 *chip8, uint8_t x); 
 
-
-// Function to initialize the CHIP-8
 int initialize(CHIP_8 *chip8, char* filename); 
 
-
 void emulate_cycle(CHIP_8 *chip8); 
-void memory_dump(CHIP_8 * chip8, uint8_t x);
+
+void memory_dump(CHIP_8 * chip8, uint8_t start, uint8_t end); 
+
 void execution(CHIP_8 * chip8);
+
+void init_keypad(CHIP_8 * chip8);
+
+void init_display(CHIP_8 *chip8);

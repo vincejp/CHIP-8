@@ -1,33 +1,45 @@
 #include "chip-8.h"
 #include "SDL.h"
 #include <stdbool.h>
+#include <stdlib.h>
 #include <stdio.h>
-#include <string.h>
 #include <time.h>
 
 int main(int argc, char* argv[])
 {
   srand(time(NULL));
-  bool quit = false;
+  // Create a new instance of the struct 
   CHIP_8 chip8;
-  SDL_Init(SDL_INIT_VIDEO);
+  // If ROM is properly initialized, continue execution
+  // Otherwise, quit 
   if(initialize(&chip8, argv[1]) == -1)
   {
-    printf("Error initializing ROM");
+    printf("Error initializing ROM\n");
     return -1;
   };
+  // Initialize SDL_video 
 
+  if(SDL_Init(SDL_INIT_VIDEO) != 0) {
+    printf("Error initializing SDL video");
+    return -1;
+  };
+  // Set the delay timer 
   chip8.delay_timer = 60; 
-  int instructions_per_second = 500;
+  // Set instructions per second 
+  int instructions_per_second = 200;
+  // Create the SDL Window 
   SDL_Window * window = SDL_CreateWindow("CHIP-8",
       SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 64 * 10, 32 * 10, 0);
+  // Create the SDL Renderer 
   SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, 0);
-  SDL_Texture *texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_UNKNOWN, SDL_TEXTUREACCESS_STREAMING, 64, 32);
-  memset(chip8.display, 0, 64 * 32 * sizeof(uint32_t));
+  // Create the texture 
+  SDL_Texture *texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, 64, 32);
+  bool quit = false;
+  
   while (!quit)
   {
-      SDL_Event event;
-      while(SDL_PollEvent(&event))
+      SDL_Event event; 
+      while (SDL_PollEvent(&event))
       {
         switch(event.type) {
           case SDL_QUIT:
@@ -136,15 +148,11 @@ int main(int argc, char* argv[])
           } break;
         }
       }
-      
-      // Get the time at the start 
-      const uint64_t start_frame_time = SDL_GetPerformanceCounter();
       for(int i = 0; i < instructions_per_second / 60; i++) {
+        // Clock cycles 
         emulate_cycle(&chip8);
       }
-      const uint64_t end_frame_time = SDL_GetPerformanceCounter();
-      const double time_elapsed = (double)((end_frame_time - start_frame_time) * 1000) / SDL_GetPerformanceFrequency();
-      SDL_Delay(16.67f > time_elapsed ? 16.67f - time_elapsed : 0);
+      // Update the texture, update renderer, and present to the screen 
       SDL_UpdateTexture(texture, NULL, chip8.display, 64 * sizeof(uint32_t));    
       SDL_RenderClear(renderer);
       SDL_RenderCopy(renderer, texture, NULL, NULL);
@@ -153,6 +161,8 @@ int main(int argc, char* argv[])
         chip8.delay_timer -= 1;
       } 
   }
+
+  // Clean up and quit SDL 
   
   SDL_DestroyWindow(window);
   SDL_DestroyTexture(texture);
