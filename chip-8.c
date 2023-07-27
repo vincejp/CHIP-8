@@ -3,39 +3,35 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "chip-8.h"
-#define FONT_ARRAY_SIZE 80
-#define PROGRAM_START_ADDRESS 0x200 
-#define FONT_START_ADDRESS 0x00 
-
-/* Debugging functions */
 
 void register_dump(CHIP_8 * chip8) {
+  // Prints the contents of the 16 registers
   for(int i = 0; i < 16; i++) {
     printf("Register: %d, Value: %d\n", i, chip8->registers[i]);
   }
 }
 
 void memory_dump(CHIP_8 * chip8, uint8_t start, uint8_t end) {
-  /* Function to display the contents in memory, starting at the desired location*/
+  // Prints the contents of memory starting at start and ending at end
   for(int i = start; i < end; i++) {
     printf("Memory location: %d, Value: %d\n", i, chip8->memory[i + chip8->index_register]);
   }
 }
 
 void keypad_dump(CHIP_8 * chip8) {
-  /* Function to display the contents of the keypad in memory */
+  // Prints the contents of the keypad
   for(int i = 0; i < 16; i++) {
     printf("Keypad[%d]: %d\n", i, chip8->keypad[i]);
   }
 }
 
 void execution(CHIP_8 * chip8) {
-  /* Function to display the current executing instruction */
+  // Prints the current opcode being executed
   printf("Currently executing: 0x%04x\n", chip8->opcode);
 }
 
 void load_font(CHIP_8 *chip8) {
-  /* Function to load the fontset into memory */
+  // Function to load the fontset into memory
   // Array to store the font, each sprite is 5 bytes 
   uint8_t font[FONT_ARRAY_SIZE] = {
     0xF0, 0x90, 0x90, 0x90, 0xF0, 
@@ -54,50 +50,38 @@ void load_font(CHIP_8 *chip8) {
     0xE0, 0x90, 0x90, 0x90, 0xE0, 
     0xF0, 0x80, 0xF0, 0x80, 0xF0,  
     0xF0, 0x80, 0xF0, 0x80, 0x80 };
+
   for (uint8_t i = 0; i < FONT_ARRAY_SIZE; i++) {
     chip8->memory[i + FONT_START_ADDRESS] = font[i];
   }
 }
 
-/* Initialization functions */
-
 void init_registers(CHIP_8 *chip8) {
-  /* Function to initialize registers */
+  // Zero out registers
   for(uint8_t i = 0; i < 16; i++) {
     chip8->registers[i] = 0;
   }
 }
 
 void init_memory(CHIP_8 *chip8) {
-  /* Function to initialize memory */
+  // Zero out memory 
   for(uint16_t i = 0; i < 4096 ; i++) {
     chip8->memory[i] = 0;
   }
 }
 
-void init_display(CHIP_8 *chip8) {
-  /* Function to initialize the display */
-  for(int i = 0; i < SCREEN_WIDTH * SCREEN_HEIGHT; i++) {
-    chip8->display[i] = 0;
-  }
-}
-
 void init_keypad(CHIP_8 * chip8) {
-  /* Function to initialize the keypad */ 
+  // Zero out keypad  
   for(int i = 0; i < 16; i++) {
     chip8->keypad[i] = 0;
   }
 }
 
-/* Opcodes begin here */
-
 void opcode_1NNN(CHIP_8 *chip8, uint16_t nnn) {
-  /* Jump to location nnn in memory */
   chip8->pc = nnn;
 }
 
 void opcode_2NNN(CHIP_8 * chip8, uint16_t nnn) {
-  /* Call subroutine at nnn */
   // Push the current PC to the stack
   chip8->stack[chip8->stack_ptr] = chip8->pc;
   // Increase the size of the stack 
@@ -106,56 +90,46 @@ void opcode_2NNN(CHIP_8 * chip8, uint16_t nnn) {
   chip8->pc = nnn; 
 }
 
-void opcode_3XKK(CHIP_8 * chip8, uint8_t x, uint8_t nn) {
-  /* If the value in registers[x] is equal to nn, skip one instruction */
+void opcode_3XNN(CHIP_8 * chip8, uint8_t x, uint8_t nn) {
   if(chip8->registers[x] == nn) 
     chip8->pc += 2;
 }
 
-void opcode_4XKK(CHIP_8 * chip8, uint8_t x, uint8_t nn) {
-  /* If the value in registers[x] is not equal to nn, skip one instruction */
+void opcode_4XNN(CHIP_8 * chip8, uint8_t x, uint8_t nn) {
   if(chip8->registers[x] != nn) 
     chip8->pc += 2;
 }
 
 void opcode_5XY0(CHIP_8 *chip8, uint8_t x, uint8_t y) {
-  /* Skip an instruction if registers[x] == regsiters[y] */
   if(chip8->registers[x] == chip8->registers[y]) {
     chip8->pc += 2;
   }
 }
 
 void opcode_6XNN(CHIP_8 *chip8, uint8_t x, uint8_t nn) {
-  /* Put nn in registers[x] */
   chip8->registers[x] = nn;
 }
 
 void opcode_7XNN(CHIP_8 *chip8, uint8_t x, uint8_t nn) {
-  /* Add nn to registers[x] */
   chip8->registers[x] += nn;
 }
 
 void opcode_9XY0(CHIP_8 *chip8, uint8_t x, uint8_t y) {
-  /* Skip an instruction if v[x] != v[y] */ 
   if(chip8->registers[x] != chip8->registers[y]) {
     chip8->pc += 2;
   }
 }
 
 void opcode_ANNN(CHIP_8 *chip8, uint16_t nnn) {
-  /* Set the index register to nnn */
   chip8->index_register = nnn;
 }
 
 void opcode_BNNN(CHIP_8 *chip8, uint16_t nnn) {
-  /* Jump to address nnn + registers[0] */
   chip8->pc = nnn + chip8->registers[0];
 }
 
-void opcode_CXKK(CHIP_8 *chip8, uint8_t x, uint8_t nn) {
-  /* Generate a random number and store in registers[x] */
-
-  // Generate random number between 0 and 255 
+void opcode_CXNN(CHIP_8 *chip8, uint8_t x, uint8_t nn) {
+  // Get random number between 0 and 255 
   uint8_t num = (rand() % 0xFF);
   // Binary AND the number with nn 
   // Put the result in v[x]
@@ -163,7 +137,7 @@ void opcode_CXKK(CHIP_8 *chip8, uint8_t x, uint8_t nn) {
 }
 
 void opcode_DXYN(CHIP_8 *chip8, uint8_t x, uint8_t y, uint8_t n) {
-  /* Function to draw pixels to the screen */
+  
   // Reset the flag register 
   chip8->registers[0xF] = 0; 
   // Get the x and y coordinates that the sprite will be drawn at 
@@ -179,7 +153,7 @@ void opcode_DXYN(CHIP_8 *chip8, uint8_t x, uint8_t y, uint8_t n) {
       uint8_t current_byte = chip8->memory[y + chip8->index_register];
       // Get the current pixel 
       uint8_t current_pixel = current_byte & (0x80 >> x);
-      // Get the pixel on the screen at index y_coord + y * SCREEN_WIDTH + x_coord + x
+      // Get the pixel on the screen at memory[(y_coord + y) * SCREEN_WIDTH + (x_coord + x)]
       // Keep a pointer to that memory address so that we are able to change the pixel 
       uint32_t *screen_pixel = &chip8->display[(y_coord + y) * SCREEN_WIDTH + (x_coord + x)];
       // If we are drawing too high, clip the drawing 
@@ -196,12 +170,11 @@ void opcode_DXYN(CHIP_8 *chip8, uint8_t x, uint8_t y, uint8_t n) {
       }
     }
   }
-  // Set the draw flag to be true 
+  // Indicate that something was drawn to the screen
  chip8->drawFlag = true;
 }
 
 void opcode_00EE(CHIP_8 * chip8) {
-  /* Function to return from a subroutine */
   // Decrement the stack pointer 
   chip8->stack_ptr -= 1;
   // Set the PC to whatever is at the current stack pointer 
@@ -209,37 +182,29 @@ void opcode_00EE(CHIP_8 * chip8) {
 }
 
 void opcode_00E0(CHIP_8 *chip8) {
-  /* Function to clear the screen */
-  // Turn off all pixels in the display array by setting everything to 0 
+  // Zero out the display
   for(int i = 0; i < SCREEN_WIDTH * SCREEN_HEIGHT; i++) {
     chip8->display[i] = 0;
   }
 }
 
-/* Logical and arithemtic instructions */
-
 void opcode_8XY0(CHIP_8 *chip8, uint8_t x, uint8_t y) {
-  /* Put the values of registers[y] into registers[x]*/
   chip8->registers[x] = chip8->registers[y];
 }
 
 void opcode_8XY1(CHIP_8 *chip8, uint8_t x, uint8_t y) {
-  /* Set registers[x] to the logical OR of registers[x] and registers[y] */
   chip8->registers[x] = chip8->registers[x] | chip8->registers[y];
 }
 
 void opcode_8XY2(CHIP_8 *chip8, uint8_t x, uint8_t y) {
-  /* Set registers[x] to the logical AND of registers[x] and registers[y] */
   chip8->registers[x] = chip8->registers[x] & chip8->registers[y];
 }
 
 void opcode_8XY3(CHIP_8 *chip8, uint8_t x, uint8_t y) {
-  /* Set registers[x] to the logical NOT of registers[x] and registers[y] */
   chip8->registers[x] = chip8->registers[x] ^ chip8->registers[y];
 }
 
 void opcode_8XY4(CHIP_8 *chip8, uint8_t x, uint8_t y) {
-  /* registers[x] = registers[x] + registers[y], set registers[0xF] if there is a carry */
   // Add the registers together 
   uint16_t result = chip8->registers[x] + chip8->registers[y];
   // Store the last 8 bits into registers[x] 
@@ -252,7 +217,6 @@ void opcode_8XY4(CHIP_8 *chip8, uint8_t x, uint8_t y) {
 }
 
 void opcode_8XY5(CHIP_8 *chip8, uint8_t x, uint8_t y) {
-  /* registers[x] = registers[x] - registers[y] */
   // If registers[x] >= registers[y], there is no borrow,
   // Registers[0xF] is set to 1
   uint8_t carry = chip8->registers[y] <= chip8->registers[x];
@@ -261,22 +225,21 @@ void opcode_8XY5(CHIP_8 *chip8, uint8_t x, uint8_t y) {
 }
 
 void opcode_8XY6(CHIP_8 *chip8, uint8_t x, uint8_t y) {
-  /* Set registers[x] = registers[x] SHR 1*/
-  // Get the least significant bit of v[x]
-  // Store v[y] in v[x] 
+  // Get the least significant bit of v[x], this is what will be shifted out
   uint8_t lsb = chip8->registers[x] & 0x01;
-  // Set the flag register
+  // Set the flag register if lsb is 1, 0 otherwise
   if(lsb == 1)
     chip8->registers[0xF] = 1; 
   else
     chip8->registers[0xF] = 0;
-  // Then divide by two 
+  // Divide by two by shifting one bit to the right
   chip8->registers[x] = chip8->registers[x] >> 1;
 }
 
 void opcode_8XY7(CHIP_8 *chip8, int8_t x, int8_t y) {
-  /* Set registers[x] equal to registers[y] - registers[x], set registers[0xF] if NOT borrow */
+  // Do subtraction of registers
   chip8->registers[x] = chip8->registers[y] - chip8->registers[x];
+  // Check for borrow, set flag accordingly 
   if(chip8->registers[y] > chip8->registers[x])
     chip8->registers[0xF] = 1;
   else
@@ -284,9 +247,8 @@ void opcode_8XY7(CHIP_8 *chip8, int8_t x, int8_t y) {
 }
 
 void opcode_8XYE(CHIP_8 *chip8, uint8_t x, uint8_t y) {
-  /* Set registers[x] = registers[x] SHL 1*/
   // Get the bit that will be shifted out 
-  uint8_t msb = (chip8->registers[x] & 0xF0u) >> 7u;
+  uint8_t msb = (chip8->registers[x] & 0xF0) >> 7;
   // Multiply by two(shift left one bit) 
   chip8->registers[x] <<= 1;
   // Set the flag register to be the bit shifted out 
@@ -294,48 +256,46 @@ void opcode_8XYE(CHIP_8 *chip8, uint8_t x, uint8_t y) {
 }
 
 void opcode_EX9E(CHIP_8 *chip8, uint8_t x) {
-  /* If keypad[x] is currently down, skip the next instruction */
+  // If keypad at registers[x] is currently down, increment PC by 2
   if(chip8->keypad[chip8->registers[x]] == 1) {
     chip8->pc += 2;
   }
 }
 
 void opcode_EXA1(CHIP_8 *chip8, uint8_t x) {
-  /* If keypad[x] is currently up, skip the next instruction */
+  // If keypad[x] is currently up, increment PC by 2
   if(chip8->keypad[chip8->registers[x]] == 0) {
     chip8->pc += 2;
   }
 }
 
 void opcode_FX07(CHIP_8 *chip8, uint8_t x) {
-  /* Set the delay timer value */
   chip8->registers[x] = chip8->delay_timer;
 }
 
 void opcode_FX15(CHIP_8 *chip8, uint8_t x) {
-  /* Set delay timer to registers[x] */
   chip8->delay_timer = chip8->registers[x];
 }
 
 void opcode_FX18(CHIP_8 *chip8, uint8_t x) {
-  /* Set sound timer to registers[x] */ 
   chip8->sound_timer = chip8->registers[x];
 }
 
 void opcode_FX1E(CHIP_8 *chip8, uint8_t x) {
-  /* Set index_register to index_register + registers[x] */
   chip8->index_register += chip8->registers[x];
 }
 
 void opcode_FX0A(CHIP_8 *chip8, uint8_t x) {
-  /* Stop execution and wait for a key press, store the value of it in registers[x] */
+  // Flag to set if key is found 
   bool keyfound = false;
+  // Check all keys on the keypad
   for(int i = 0; i < 16; i++) {
     if(chip8->keypad[i] != 0) {
       keyfound = true;
     }
   }
   if(keyfound == false) {
+   // Wait for a keypress, stop execution 
    chip8->pc -= 2;
   }
 }
@@ -361,23 +321,20 @@ void opcode_FX33(CHIP_8 *chip8, uint8_t x) {
 }
 
 void opcode_FX55(CHIP_8 *chip8, uint8_t x) {
-  /* Store registers[0] through registers[x] in memory 
-   * starting at the location of index register */
+  // Start at location of index register
   for(uint8_t i = 0; i <= x; i++) {
     chip8->memory[chip8->index_register + i] = chip8->registers[i];
   }
 }
 
 void opcode_FX65(CHIP_8 *chip8, uint8_t x) {
-  /* Read registers[0] - registers[x] from memory 
-   * starting at location of index_register */
+  // Read starting at index register
   for(uint8_t i = 0; i <= x; i++) {
     chip8->registers[i] = chip8->memory[chip8->index_register + i];
   }
 }
 
 int initialize(CHIP_8 *chip8, char* filename) {
-  /* Initialize the CHIP-8 */
   // Attempt to open the desired file 
   FILE* file = fopen(filename, "rb");
   if(file == NULL) {
@@ -387,7 +344,7 @@ int initialize(CHIP_8 *chip8, char* filename) {
     return -1;
   }
   // Zero out the display, memory, registers, and keypad
-  init_display(chip8);
+  opcode_00E0(chip8);
   init_memory(chip8);
   init_registers(chip8);
   init_keypad(chip8);
@@ -406,9 +363,7 @@ int initialize(CHIP_8 *chip8, char* filename) {
 
 void emulate_cycle(CHIP_8 *chip8) {
 
-  /* Emulate a cycle of the CHIP-8 CPU */
-
-  // Fetch the first byte from memory 
+  // Fetch the first byte of the instruction from memory 
   chip8->opcode = chip8->memory[chip8->pc + 0];
   // Shift it 8 bits to the left
   chip8->opcode <<= 8;
@@ -442,10 +397,10 @@ void emulate_cycle(CHIP_8 *chip8) {
       opcode_2NNN(chip8, nnn);
       break; 
     case 0x3000:
-      opcode_3XKK(chip8, x, nn);
+      opcode_3XNN(chip8, x, nn);
       break;
     case 0x4000:
-      opcode_4XKK(chip8, x, nn);
+      opcode_4XNN(chip8, x, nn);
       break;
     case 0x5000:
       opcode_5XY0(chip8, x, y);
@@ -466,7 +421,7 @@ void emulate_cycle(CHIP_8 *chip8) {
       opcode_BNNN(chip8, nnn);
       break;
     case 0xC000:
-      opcode_CXKK(chip8, x, nn);
+      opcode_CXNN(chip8, x, nn);
       break;
     case 0xD000:
       opcode_DXYN(chip8, x, y, n); 
