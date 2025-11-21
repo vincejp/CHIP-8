@@ -1,8 +1,7 @@
 # CHIP-8
 
-My attempt at writing a CHIP-8 interpreter in C and SDL2! 
+CHIP-8 interpreter using C and SDL2.
 <br></br>
-Below are examples of it in action.
 
 <p align = "center">
 
